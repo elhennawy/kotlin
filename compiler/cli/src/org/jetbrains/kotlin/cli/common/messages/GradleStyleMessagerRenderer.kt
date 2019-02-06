@@ -25,8 +25,8 @@ class GradleStyleMessageRenderer : MessageRenderer {
             result.append(location.path).append(": ")
 
             if (line > 0 && column > 0) {
-                result.append("[").append(line).append(", ")
-                result.append(column).append("]: ")
+                result.append("(").append(line).append(", ")
+                result.append(column).append("): ")
             }
 
             result.append(message)
