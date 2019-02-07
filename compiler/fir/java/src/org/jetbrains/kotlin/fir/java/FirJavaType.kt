@@ -15,6 +15,4 @@ class FirJavaType(
     session: FirSession,
     psi: PsiElement?,
     val type: JavaType
-    ) : FirType, FirAbstractAnnotatedElement(session, psi) {
-
-}
+) : FirType, FirAbstractAnnotatedElement(session, psi)
