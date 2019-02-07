@@ -120,20 +120,21 @@ fun isModuleConfigured(moduleSourceRootGroup: ModuleSourceRootGroup): Boolean {
  * Note that this method is expensive and should not be called more often than strictly necessary.
  */
 fun getModulesWithKotlinFiles(project: Project): Collection<Module> {
-    if (!runReadAction {
-            !project.isDisposed &&
-                    FileTypeIndex.containsFileOfType(KotlinFileType.INSTANCE, GlobalSearchScope.projectScope(project))
-        }) {
-        return emptyList()
-    }
-
-    return project.allModules()
-        .filter { module ->
-            runReadAction {
-                !project.isDisposed && !module.isDisposed
-                        FileTypeIndex.containsFileOfType(KotlinFileType.INSTANCE, module.getModuleScope(true))
-            }
-        }
+//    if (!runReadAction {
+//            !project.isDisposed &&
+//                    FileTypeIndex.containsFileOfType(KotlinFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+//        }) {
+//        return emptyList()
+//    }
+//
+//    return project.allModules()
+//        .filter { module ->
+//            runReadAction {
+//                !project.isDisposed && !module.isDisposed
+//                        FileTypeIndex.containsFileOfType(KotlinFileType.INSTANCE, module.getModuleScope(true))
+//            }
+//        }
+    return emptyList()
 }
 
 /**

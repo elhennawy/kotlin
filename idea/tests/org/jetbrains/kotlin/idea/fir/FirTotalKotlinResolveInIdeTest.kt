@@ -5,8 +5,14 @@
 
 package org.jetbrains.kotlin.idea.fir
 
+import com.intellij.ide.impl.ProjectUtil
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ex.ApplicationEx
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
@@ -25,32 +31,20 @@ import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.caches.project.productionSourceInfo
 import org.jetbrains.kotlin.psi.KtFile
 import java.io.File
+import java.nio.file.Path
 
 class FirTotalKotlinResolveInIdeTest : ModuleTestCase() {
     private val forbiddenDirectories = listOf("testdata", "resources")
 
-    private val projectRootFile = File(".")
+    private val projectRootFile = File("C:/KK_130")
 
-    override fun setUpModule() {
-        super.setUpModule()
+    override fun setUpProject() {
+        println("Using project in $projectRootFile ")
 
-        ModuleRootModificationUtil.addContentRoot(module, VfsUtil.findFileByIoFile(projectRootFile, true)!!)
+        //tmp.resolve(".idea").deleteRecursively()
 
-        ModuleRootModificationUtil.updateModel(module) {
-            projectRootFile.walkTopDown().onEnter {
-                it.name.toLowerCase() !in forbiddenDirectories
-            }.filter {
-                it.isDirectory
-            }.forEach { dir ->
-                val vdir by lazy { VfsUtil.findFileByIoFile(dir, true)!! }
-                if (dir.name in setOf("src", "test", "tests")) {
-                    it.contentEntries.single().addSourceFolder(vdir, false)
-                } else if (dir.name in setOf("build")) {
-                    it.contentEntries.single().addExcludeFolder(vdir)
-                }
-            }
-        }
-
+        (ApplicationManager.getApplication() as ApplicationEx).doNotSave()
+        myProject = ProjectUtil.openOrImport(projectRootFile.path, null, false)
     }
 
     private fun createSession(): FirSession {
