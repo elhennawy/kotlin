@@ -19,9 +19,11 @@ import org.jetbrains.kotlin.fir.service
 import org.jetbrains.kotlin.fir.symbols.ConeClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
+import org.jetbrains.kotlin.fir.types.ConeKotlinTypeProjection
 import org.jetbrains.kotlin.fir.types.FirResolvedType
 import org.jetbrains.kotlin.fir.types.FirType
 import org.jetbrains.kotlin.fir.types.impl.ConeClassTypeImpl
+import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeImpl
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.load.java.structure.*
@@ -29,6 +31,8 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
 
 class JavaSymbolFactory(val session: FirSession) {
+
+    private val symbolProvider: FirSymbolProvider get() = session.service()
 
     private val JavaClass.modality: Modality
         get() = when {
@@ -45,12 +49,31 @@ class JavaSymbolFactory(val session: FirSession) {
             else -> ClassKind.CLASS
         }
 
-    private fun JavaClassifierType.superTypeToFirType(): FirResolvedType {
-        val javaClass = classifier as JavaClass
+    private fun JavaClassifierType.toFirResolvedType(): FirResolvedType {
+        val coneType = when (val classifier = classifier) {
+            is JavaClass -> {
+                val symbol = symbolProvider.getSymbolByFqName(classifier.classId!!) as ConeClassSymbol
+                ConeClassTypeImpl(symbol, typeArguments = typeArguments.map { it.toConeProjection() }.toTypedArray())
+            }
+            is JavaTypeParameter -> {
+                // TODO: it's unclear how to identify type parameter by the symbol
+                // TODO: some type parameter cache (provider?)
+                val symbol = createTypeParameterSymbol(classifier.name)
+                ConeTypeParameterTypeImpl(symbol)
+            }
+            else -> throw AssertionError("Unexpected classifier: $classifier")
+        }
+        return FirResolvedTypeImpl(
+            session, psi = null, type = coneType,
+            isNullable = false, annotations = annotations.map { it.toFirAnnotationCall() }
+        )
+    }
 
-        val symbol = session.service<FirSymbolProvider>().getSymbolByFqName(javaClass.classId!!) as ConeClassSymbol
-        require(this.typeArguments.isEmpty()) { TODO("Type arguments for java classes") }
-        return FirResolvedTypeImpl(session, null, ConeClassTypeImpl(symbol, emptyArray()), false, emptyList())
+    private fun JavaType.toConeProjection(): ConeKotlinTypeProjection {
+        if (this is JavaClassifierType) {
+            return toFirResolvedType().type
+        }
+        throw AssertionError("Unexpected type argument: $this")
     }
 
     private fun JavaType.toFirType(): FirType {
@@ -101,7 +124,8 @@ class JavaSymbolFactory(val session: FirSession) {
     }
 
     fun createClassSymbol(javaClass: JavaClass): ConeClassSymbol {
-        val firSymbol = FirClassSymbol(javaClass.classId ?: error("!"))
+        val classId = javaClass.classId ?: error("!")
+        val firSymbol = FirClassSymbol(classId)
         FirClassImpl(
             session, null, firSymbol, javaClass.name,
             javaClass.visibility, javaClass.modality,
@@ -115,7 +139,7 @@ class JavaSymbolFactory(val session: FirSession) {
             }
             addAnnotationsFrom(javaClass)
             for (supertype in javaClass.supertypes) {
-                superTypes += supertype.superTypeToFirType()
+                superTypes += supertype.toFirResolvedType()
             }
             // TODO: declarations (probably should be done later)
         }
