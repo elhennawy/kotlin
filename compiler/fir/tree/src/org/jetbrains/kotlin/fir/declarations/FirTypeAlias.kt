@@ -6,7 +6,10 @@
 package org.jetbrains.kotlin.fir.declarations
 
 import org.jetbrains.kotlin.fir.symbols.FirSymbolOwner
+import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.FirType
+import org.jetbrains.kotlin.fir.types.coneTypeSafe
+import org.jetbrains.kotlin.fir.types.coneTypeUnsafe
 import org.jetbrains.kotlin.fir.visitors.FirVisitor
 
 interface FirTypeAlias : FirMemberDeclaration, FirSymbolOwner<FirTypeAlias> {
@@ -20,3 +23,6 @@ interface FirTypeAlias : FirMemberDeclaration, FirSymbolOwner<FirTypeAlias> {
         expandedType.accept(visitor, data)
     }
 }
+
+
+val FirTypeAlias.expandedConeType get() = expandedType.coneTypeSafe<ConeClassLikeType>()

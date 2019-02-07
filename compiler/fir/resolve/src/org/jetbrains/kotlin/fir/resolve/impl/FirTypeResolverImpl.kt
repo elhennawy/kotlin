@@ -5,13 +5,13 @@
 
 package org.jetbrains.kotlin.fir.resolve.impl
 
-import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.resolve.FirQualifierResolver
 import org.jetbrains.kotlin.fir.resolve.FirTypeResolver
 import org.jetbrains.kotlin.fir.scopes.FirPosition
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.symbols.*
+import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.*
 import org.jetbrains.kotlin.name.Name
@@ -46,11 +46,11 @@ class FirTypeResolverImpl : FirTypeResolver {
             is ConeClassSymbol -> {
                 ConeClassTypeImpl(this, parts.toTypeProjections())
             }
-            is ConeTypeAliasSymbol -> {
+            is FirTypeAliasSymbol -> {
                 ConeAbbreviatedTypeImpl(
                     abbreviationSymbol = this as ConeClassLikeSymbol,
                     typeArguments = parts.toTypeProjections(),
-                    directExpansion = expansionType ?: ConeClassErrorType("Unresolved expansion")
+                    directExpansion = fir.expandedType.coneTypeSafe() ?: ConeClassErrorType("Unresolved expansion")
                 )
             }
             else -> error("!")

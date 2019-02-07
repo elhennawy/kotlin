@@ -15,6 +15,8 @@ import org.jetbrains.kotlin.fir.resolve.FirTypeResolver
 import org.jetbrains.kotlin.fir.scopes.FirPosition
 import org.jetbrains.kotlin.fir.scopes.impl.*
 import org.jetbrains.kotlin.fir.symbols.*
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
 import org.jetbrains.kotlin.fir.transformSingle
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.FirErrorTypeImpl
@@ -205,10 +207,10 @@ open class FirTypeResolveTransformer(
                     file.transformSingle(transformer, null)
 
                 } else {
-                    if (symbol is ConeTypeAliasSymbol) {
-                        symbol.expansionType?.let { if (it !is ConeClassErrorType) walkSymbols(it.symbol) }
-                    } else if (symbol is ConeClassSymbol) {
-                        symbol.superTypes.forEach { if (it !is ConeClassErrorType) walkSymbols(it.symbol) }
+                    if (symbol is FirTypeAliasSymbol) {
+                        symbol.fir.expandedConeType?.let { if (it !is ConeClassErrorType) walkSymbols(it.symbol) }
+                    } else if (symbol is FirClassSymbol) {
+                        symbol.fir.superConeTypes.forEach { if (it !is ConeClassErrorType) walkSymbols(it.symbol) }
                     }
                 }
             }

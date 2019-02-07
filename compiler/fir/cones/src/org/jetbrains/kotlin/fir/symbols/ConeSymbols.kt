@@ -20,17 +20,13 @@ interface ConeTypeParameterSymbol : ConeSymbol {
 interface ConeClassLikeSymbol : ConeSymbol {
     val classId: ClassId
 
-    val typeParameters: List<ConeTypeParameterSymbol>
 }
 
 interface ConeTypeAliasSymbol : ConeClassLikeSymbol {
-    val expansionType: ConeClassLikeType?
 }
 
 interface ConeClassSymbol : ConeClassLikeSymbol {
-    val kind: ClassKind
-
-    val superTypes: List<ConeClassLikeType>
+   
 }
 
 interface ConePackageSymbol {

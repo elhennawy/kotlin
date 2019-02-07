@@ -11,28 +11,35 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.impl.FirClassImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirTypeParameterImpl
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
+import org.jetbrains.kotlin.fir.expressions.FirErrorExpression
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.impl.*
 import org.jetbrains.kotlin.fir.java.FirJavaType
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.impl.getOrPut
 import org.jetbrains.kotlin.fir.service
 import org.jetbrains.kotlin.fir.symbols.ConeClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
+import org.jetbrains.kotlin.fir.types.ConeClassErrorType
 import org.jetbrains.kotlin.fir.types.ConeKotlinTypeProjection
 import org.jetbrains.kotlin.fir.types.FirResolvedType
 import org.jetbrains.kotlin.fir.types.FirType
 import org.jetbrains.kotlin.fir.types.impl.ConeClassTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
+import org.jetbrains.kotlin.fir.types.impl.FirErrorTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeImpl
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.load.java.structure.*
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
 
 class JavaSymbolFactory(val session: FirSession) {
 
     private val symbolProvider: FirSymbolProvider get() = session.service()
+
+    val symbols = mutableMapOf<ClassId, ConeClassSymbol>()
 
     private val JavaClass.modality: Modality
         get() = when {
@@ -52,7 +59,7 @@ class JavaSymbolFactory(val session: FirSession) {
     private fun JavaClassifierType.toFirResolvedType(): FirResolvedType {
         val coneType = when (val classifier = classifier) {
             is JavaClass -> {
-                val symbol = symbolProvider.getSymbolByFqName(classifier.classId!!) as ConeClassSymbol
+                val symbol = symbolProvider.getClassLikeSymbolByFqName(classifier.classId!!) as ConeClassSymbol
                 ConeClassTypeImpl(symbol, typeArguments = typeArguments.map { it.toConeProjection() }.toTypedArray())
             }
             is JavaTypeParameter -> {
@@ -61,7 +68,7 @@ class JavaSymbolFactory(val session: FirSession) {
                 val symbol = createTypeParameterSymbol(classifier.name)
                 ConeTypeParameterTypeImpl(symbol)
             }
-            else -> throw AssertionError("Unexpected classifier: $classifier")
+            else -> ConeClassErrorType(reason = "Unexpected classifier: $classifier")
         }
         return FirResolvedTypeImpl(
             session, psi = null, type = coneType,
@@ -73,7 +80,7 @@ class JavaSymbolFactory(val session: FirSession) {
         if (this is JavaClassifierType) {
             return toFirResolvedType().type
         }
-        throw AssertionError("Unexpected type argument: $this")
+        return ConeClassErrorType("Unexpected type argument: $this")
     }
 
     private fun JavaType.toFirType(): FirType {
@@ -105,7 +112,7 @@ class JavaSymbolFactory(val session: FirSession) {
         return when (this) {
             is JavaLiteralAnnotationArgument -> when (value) {
                 null -> FirConstExpressionImpl(session, null, IrConstKind.Null, null)
-                else -> throw AssertionError("Unknown value in JavaLiteralAnnotationArgument: $value")
+                else -> FirErrorExpressionImpl(session, null, "Unknown value in JavaLiteralAnnotationArgument: $value")
             }
             is JavaArrayAnnotationArgument -> FirArrayOfCallImpl(session, null).apply {
                 for (element in getElements()) {
@@ -119,31 +126,34 @@ class JavaSymbolFactory(val session: FirSession) {
                 //arguments += getReferencedType().toFirType()
             }
             is JavaAnnotationAsAnnotationArgument -> getAnnotation().toFirAnnotationCall()
-            else -> throw AssertionError("Unknown JavaAnnotationArgument: ${this::class.java}")
+            else -> FirErrorExpressionImpl(session, null, "Unknown JavaAnnotationArgument: ${this::class.java}")
         }
     }
 
     fun createClassSymbol(javaClass: JavaClass): ConeClassSymbol {
         val classId = javaClass.classId ?: error("!")
-        val firSymbol = FirClassSymbol(classId)
-        FirClassImpl(
-            session, null, firSymbol, javaClass.name,
-            javaClass.visibility, javaClass.modality,
-            isExpect = false, isActual = false,
-            classKind = javaClass.classKind,
-            isInner = !javaClass.isStatic, isCompanion = false,
-            isData = false, isInline = false
-        ).apply {
-            for (typeParameter in javaClass.typeParameters) {
-                typeParameters += createTypeParameterSymbol(typeParameter.name).fir
+
+        return symbols.getOrPut(classId, {
+            FirClassSymbol(classId)
+        }) { firSymbol ->
+            FirClassImpl(
+                session, null, firSymbol, javaClass.name,
+                javaClass.visibility, javaClass.modality,
+                isExpect = false, isActual = false,
+                classKind = javaClass.classKind,
+                isInner = !javaClass.isStatic, isCompanion = false,
+                isData = false, isInline = false
+            ).apply {
+                for (typeParameter in javaClass.typeParameters) {
+                    typeParameters += createTypeParameterSymbol(typeParameter.name).fir
+                }
+                addAnnotationsFrom(javaClass)
+                for (supertype in javaClass.supertypes) {
+                    superTypes += supertype.toFirResolvedType()
+                }
+                // TODO: declarations (probably should be done later)
             }
-            addAnnotationsFrom(javaClass)
-            for (supertype in javaClass.supertypes) {
-                superTypes += supertype.toFirResolvedType()
-            }
-            // TODO: declarations (probably should be done later)
         }
-        return firSymbol
     }
 
     private fun FirAbstractAnnotatedElement.addAnnotationsFrom(javaClass: JavaAnnotationOwner) {

@@ -23,19 +23,19 @@ class LibraryClassSymbol(
     val typeDeserializer: FirTypeDeserializer
 ) : ConeClassSymbol {
 
-    override val kind: ClassKind = ProtoEnumFlags.classKind(Flags.CLASS_KIND[classProto.flags])
+    //override val kind: ClassKind = ProtoEnumFlags.classKind(Flags.CLASS_KIND[classProto.flags])
 
-    override val typeParameters: List<ConeTypeParameterSymbol> by lazy { typeDeserializer.ownTypeParameters }
+    //override val typeParameters: List<ConeTypeParameterSymbol> by lazy { typeDeserializer.ownTypeParameters }
     override val classId: ClassId = nameResolver.getClassId(classProto.fqName)
 
     val typeTable = TypeTable(classProto.typeTable)
 
-    override val superTypes: List<ConeClassLikeType>
-        get() {
-            val result = classProto.supertypes(typeTable).map { supertypeProto ->
-                typeDeserializer.classLikeType(supertypeProto)
-            }// TODO: + c.components.additionalClassPartsProvider.getSupertypes(this@DeserializedClassDescriptor)
-
-            return result.filterNotNull()
-        }
+//    override val superTypes: List<ConeClassLikeType>
+//        get() {
+//            val result = classProto.supertypes(typeTable).map { supertypeProto ->
+//                typeDeserializer.classLikeType(supertypeProto)
+//            }// TODO: + c.components.additionalClassPartsProvider.getSupertypes(this@DeserializedClassDescriptor)
+//
+//            return result.filterNotNull()
+//        }
 }

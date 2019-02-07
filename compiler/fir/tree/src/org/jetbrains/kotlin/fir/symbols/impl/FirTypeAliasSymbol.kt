@@ -14,9 +14,5 @@ import org.jetbrains.kotlin.fir.types.coneTypeSafe
 import org.jetbrains.kotlin.name.ClassId
 
 class FirTypeAliasSymbol(override val classId: ClassId) : ConeTypeAliasSymbol, AbstractFirBasedSymbol<FirTypeAlias>() {
-    override val typeParameters: List<ConeTypeParameterSymbol>
-        get() = fir.typeParameters.map { it.symbol }
-    override val expansionType: ConeClassLikeType?
-        get() = fir.expandedType.coneTypeSafe()
 
 }

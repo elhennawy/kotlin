@@ -45,14 +45,14 @@ class IdeFirDependenciesSymbolProvider(
 
     private fun buildKotlinClassOnRequest(file: KtFile, classId: ClassId, session: FirSession): ConeSymbol? {
         val impl = FirProvider.getInstance(session) as FirProviderImpl
-        val classifier = impl.getSymbolByFqName(classId)
+        val classifier = impl.getClassLikeSymbolByFqName(classId)
         if (classifier != null) {
             return classifier
         }
 
         val builder = RawFirBuilder(session, stubMode = true)
         impl.recordFile(builder.buildFirFile(file))
-        return impl.getSymbolByFqName(classId)
+        return impl.getClassLikeSymbolByFqName(classId)
     }
 
     private fun selectNearest(classesPsi: Collection<KtDeclaration>, typeAliasesPsi: Collection<KtTypeAlias>): KtDeclaration? {
@@ -83,15 +83,15 @@ class IdeFirDependenciesSymbolProvider(
             }
 
             val session = sessionProvider.getSession(module) ?: return@lookupCacheOrCalculate null
-            session.service<FirProvider>().getSymbolByFqName(classId)
+            session.service<FirProvider>().getClassLikeSymbolByFqName(classId)
         }
     }
 
     private fun tryJava(classId: ClassId): ConeSymbol? {
-        return javaSymbolProvider.getSymbolByFqName(classId)
+        return javaSymbolProvider.getClassLikeSymbolByFqName(classId)
     }
 
-    override fun getSymbolByFqName(classId: ClassId): ConeSymbol? {
+    override fun getClassLikeSymbolByFqName(classId: ClassId): ConeSymbol? {
         return tryKotlin(classId) ?: tryJava(classId)
     }
 

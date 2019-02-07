@@ -15,12 +15,5 @@ import org.jetbrains.kotlin.fir.types.coneTypeSafe
 import org.jetbrains.kotlin.name.ClassId
 
 class FirClassSymbol(override val classId: ClassId) : ConeClassSymbol, AbstractFirBasedSymbol<FirRegularClass>() {
-    override val kind: ClassKind
-        get() = fir.classKind
 
-    override val superTypes: List<ConeClassLikeType>
-        get() = fir.superTypes.mapNotNull { it.coneTypeSafe<ConeClassLikeType>() }
-
-    override val typeParameters: List<ConeTypeParameterSymbol>
-        get() = fir.typeParameters.map { it.symbol }
 }
