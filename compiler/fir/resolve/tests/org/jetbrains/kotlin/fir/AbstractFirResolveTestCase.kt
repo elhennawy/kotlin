@@ -5,7 +5,10 @@
 
 package org.jetbrains.kotlin.fir
 
+import com.intellij.openapi.extensions.Extensions
+import com.intellij.psi.PsiElementFinder
 import com.intellij.psi.search.GlobalSearchScope
+import org.jetbrains.kotlin.asJava.finder.JavaElementFinder
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.jvm.compiler.TopDownAnalyzerFacadeForJVM
 import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveTransformer
@@ -21,6 +24,14 @@ import java.io.File
 abstract class AbstractFirResolveTestCase : AbstractFirResolveWithSessionTestCase() {
     override fun createEnvironment(): KotlinCoreEnvironment {
         return createEnvironmentWithMockJdk(ConfigurationKind.JDK_NO_RUNTIME)
+    }
+
+    override fun setUp() {
+        super.setUp()
+
+        Extensions.getArea(project)
+            .getExtensionPoint(PsiElementFinder.EP_NAME)
+            .unregisterExtension(JavaElementFinder::class.java)
     }
 
     private fun doCreateAndProcessFir(ktFiles: List<KtFile>): List<FirFile> {
